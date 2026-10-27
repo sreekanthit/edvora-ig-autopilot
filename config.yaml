@@ -1,0 +1,7 @@
+timezone: Asia/Kolkata
+# Best-guess slots for Indian students; the weekly report tells you which hours really work.
+post_slots: ["07:30", "13:00", "19:30", "21:00"]
+max_posts_per_day: 2          # keep low; quality > volume
+require_approval: true        # drafts are never posted until you set status to "approved"
+trial_reels_first: false      # true = publish Reels as Trial Reels (shown to non-followers first)
+min_post_age_hours_for_report: 48
