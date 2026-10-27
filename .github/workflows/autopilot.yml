@@ -1,0 +1,36 @@
+name: autopilot
+on:
+  schedule:
+    - cron: "*/30 * * * *"      # post-due check (GitHub cron can run late; that is fine)
+    - cron: "30 20 * * *"       # daily monitor + report (~02:00 IST)
+  workflow_dispatch:
+concurrency: { group: autopilot, cancel-in-progress: false }
+permissions: { contents: write }
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    env:
+      IG_USER_ID: ${{ secrets.IG_USER_ID }}
+      IG_ACCESS_TOKEN: ${{ secrets.IG_ACCESS_TOKEN }}
+      PUBLIC_BASE_URL: ${{ vars.PUBLIC_BASE_URL }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: "3.11" }
+      - run: pip install -r requirements.txt
+      - name: Post next due item
+        if: github.event.schedule != '30 20 * * *'
+        run: python -m src.autopilot post-due
+        working-directory: .
+        env: { PYTHONPATH: . }
+      - name: Monitor and report (daily)
+        if: github.event.schedule == '30 20 * * *' || github.event_name == 'workflow_dispatch'
+        run: |
+          python -m src.autopilot monitor
+          python -m src.autopilot report
+        env: { PYTHONPATH: . }
+      - name: Commit state (queue status, db, reports)
+        run: |
+          git config user.name "edvora-autopilot"; git config user.email "autopilot@users.noreply.github.com"
+          git add content data reports
+          git diff --cached --quiet || (git commit -m "autopilot: update state [skip ci]" && git push)
